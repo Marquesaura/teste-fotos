@@ -11,6 +11,9 @@ class PhotoPlatform {
         this.bindEvents();
         this.updatePhotoCount();
         this.renderPosts();
+
+        // Inicializar sincronização em nuvem se habilitada
+        this.initializeCloudIfEnabled();
     }
 
     initializeElements() {
@@ -279,6 +282,25 @@ class PhotoPlatform {
         this.discardPhoto();
         
         this.showNotification('Foto postada com sucesso! 📤', 'success');
+
+        // Enviar para nuvem, se habilitado
+        this.pushPostToCloud(post).catch(() => {});
+    }
+
+    async pushPostToCloud(post) {
+        if (!this.db) return;
+        try {
+            await this.db.collection('posts').doc(String(post.id)).set({
+                id: post.id,
+                image: post.image,
+                caption: post.caption,
+                timestamp: post.timestamp,
+                likes: post.likes || 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        } catch (e) {
+            console.warn('Falha ao enviar post à nuvem:', e);
+        }
     }
 
     discardPhoto() {
@@ -311,6 +333,9 @@ class PhotoPlatform {
                         <button class="action-btn${isLiked ? ' liked' : ''}" ${isLiked ? 'disabled' : ''} onclick="photoPlatform.likePost(${post.id})" title="Curtir">
                             ❤️ ${post.likes}
                         </button>
+                        <button class="action-btn" onclick="photoPlatform.downloadPost(${post.id})" title="Baixar">
+                            ⬇️
+                        </button>
                         <button class="action-btn" onclick="photoPlatform.deletePost(${post.id})" title="Excluir">
                             🗑️
                         </button>
@@ -319,6 +344,20 @@ class PhotoPlatform {
             </div>
         `;
         }).join('');
+    }
+
+    downloadPost(postId) {
+        const post = this.posts.find(p => p.id === postId);
+        if (!post) return;
+        const link = document.createElement('a');
+        link.href = post.image;
+        const ts = new Date(post.timestamp).getTime() || post.id;
+        const safeCaption = (post.caption || 'foto').replace(/[^a-z0-9-_]+/gi, '_').slice(0, 40);
+        link.download = `foto_${safeCaption}_${ts}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showNotification('Download iniciado.', 'info');
     }
 
     likePost(postId) {
@@ -336,6 +375,23 @@ class PhotoPlatform {
         this.saveLikedPosts();
         this.renderPosts();
         this.showNotification('Curtida adicionada! ❤️', 'success');
+
+        // Atualizar nuvem, se habilitada
+        this.incrementLikeInCloud(postId).catch(() => {});
+    }
+
+    async incrementLikeInCloud(postId) {
+        if (!this.db) return;
+        try {
+            const ref = this.db.collection('posts').doc(String(postId));
+            await this.db.runTransaction(async (tx) => {
+                const snap = await tx.get(ref);
+                const current = snap.exists ? (snap.data().likes || 0) : 0;
+                tx.set(ref, { likes: current + 1 }, { merge: true });
+            });
+        } catch (e) {
+            console.warn('Falha ao incrementar like na nuvem:', e);
+        }
     }
 
     deletePost(postId) {
@@ -375,6 +431,41 @@ class PhotoPlatform {
     loadPosts() {
         const saved = localStorage.getItem('photoPlatform_posts');
         return saved ? JSON.parse(saved) : [];
+    }
+
+    async initializeCloudIfEnabled() {
+        try {
+            if (!window.firebaseConfig || !window.firebaseConfig.enabled) return;
+            const { config } = window.firebaseConfig;
+            if (!config || !config.apiKey) return;
+
+            this.firebaseApp = firebase.initializeApp(config);
+            this.db = firebase.firestore();
+
+            // Sincronizar em tempo real
+            this.unsubscribe = this.db.collection('posts')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((snap) => {
+                    const cloudPosts = [];
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        cloudPosts.push({
+                            id: d.id,
+                            image: d.image,
+                            caption: d.caption,
+                            timestamp: d.timestamp,
+                            likes: d.likes || 0
+                        });
+                    });
+                    // Atualiza localmente e salva cache
+                    this.posts = cloudPosts;
+                    this.savePosts();
+                    this.updatePhotoCount();
+                    this.renderPosts();
+                });
+        } catch (e) {
+            console.warn('Falha ao inicializar nuvem (opcional):', e);
+        }
     }
 
     saveLikedPosts() {
