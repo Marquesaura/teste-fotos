@@ -197,7 +197,14 @@ class PhotoPlatform {
     }
 
     renderEditor() {
-        if (!this.editorCanvas || !this.editorCtx || !this.tempPhoto) return;
+        if (!this.editorCanvas || !this.editorCtx || !this.tempPhoto) {
+            // Fallback: mostrar imagem simples se não houver editor
+            if (this.previewImage && this.tempPhoto) {
+                this.previewImage.src = this.tempPhoto;
+                this.previewImage.style.display = 'block';
+            }
+            return;
+        }
         const img = new Image();
         img.onload = () => {
             // Ajustar canvas para caber a imagem mantendo proporção até um limite
@@ -244,6 +251,15 @@ class PhotoPlatform {
                 this.editorCtx.fillRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
                 this.editorCtx.clearRect(this.cropRect.x, this.cropRect.y, this.cropRect.w, this.cropRect.h);
                 this.editorCtx.restore();
+            }
+            // Esconder fallback após renderizar
+            if (this.previewImage) this.previewImage.style.display = 'none';
+        };
+        img.onerror = () => {
+            // Fallback se falhar o load da imagem
+            if (this.previewImage) {
+                this.previewImage.src = this.tempPhoto;
+                this.previewImage.style.display = 'block';
             }
         };
         img.src = this.tempPhoto;
