@@ -18,7 +18,7 @@
                 <button id="tabCapture" class="tab-btn active">Capturar</button>
                 <button id="tabPosts" class="tab-btn">Posts</button>
             </nav>
-            <!-- Seção de Captura -->
+           
             <section class="capture-section" id="viewCapture">
                 <div class="camera-container">
                     <video id="video" autoplay muted playsinline></video>
@@ -77,11 +77,15 @@
                                 </select>
                             </label>
                         </div>
-                        <input type="text" id="photoCaption" placeholder="Adicione uma legenda...">
                         <div class="editor-actions">
                             <button id="resetEdit" class="btn btn-secondary">Resetar Edição</button>
                             <button id="downloadEdited" class="btn btn-primary">Baixar Editada</button>
                         </div>
+                        <div id="faceAnalysis" class="face-analysis" style="display: none;">
+                            <h4> Análise Facial:</h4>
+                            <div id="faceResults"></div>
+                        </div>
+
                         <button id="postPhoto" class="btn btn-primary">Postar Foto</button>
                         <button id="discardPhoto" class="btn btn-secondary"> Descartar</button>
                     </div>
@@ -118,10 +122,32 @@
         </div>
     </div>
 
+    <!-- Modal de análise facial -->
+    <div id="faceAnalysisModal" class="modal" style="display: none;">
+        <div class="modal-content analysis-modal">
+            <h3>🕷️ Analisando características faciais...</h3>
+            <div class="analysis-progress">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div id="analysisStatus" class="analysis-status">Iniciando análise...</div>
+            </div>
+            <div id="characteristicsList" class="characteristics-list"></div>
+            <div id="comparisonResults" class="comparison-results"></div>
+        </div>
+    </div>
+
+    <!-- MediaPipe Face Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+    
     <!-- Firebase opcional (para sincronizar entre dispositivos) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="face-detection.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

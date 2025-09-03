@@ -220,6 +220,36 @@ main {
     gap: 10px;
 }
 
+.face-analysis {
+    background: #f0f8ff;
+    border: 1px solid #c381cd;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 10px 0;
+}
+
+.face-analysis h4 {
+    margin: 0 0 8px 0;
+    color: #85088c;
+    font-size: 14px;
+}
+
+.face-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 6px;
+    font-size: 12px;
+}
+
+.face-tag {
+    background: #e8f4fd;
+    border: 1px solid #9d1ea4;
+    border-radius: 4px;
+    padding: 4px 6px;
+    text-align: center;
+    color: #333;
+}
+
 .filters-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -470,4 +500,97 @@ main {
     display: block;
     margin-top: 12px;
     color: #666;
+}
+
+/* Analysis Modal */
+.analysis-modal {
+    max-width: 500px;
+    text-align: center;
+    background: linear-gradient(135deg, #430030, #85088c);
+    color: white;
+}
+
+.analysis-modal h3 {
+    color: white;
+    margin-bottom: 20px;
+}
+
+.analysis-progress {
+    margin: 20px 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c381cd, #fa8a1c);
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 4px;
+}
+
+.analysis-status {
+    color: white;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.characteristics-list {
+    text-align: left;
+    margin: 15px 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.characteristic-item {
+    background: rgba(255, 255, 255, 0.1);
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #c381cd;
+    opacity: 0;
+    animation: slideIn 0.5s ease forwards;
+}
+
+.characteristic-item.analyzed {
+    border-left-color: #fa8a1c;
+    background: rgba(250, 138, 28, 0.1);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.comparison-results {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    border: 2px solid #c381cd;
+}
+
+.final-result {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fa8a1c;
+    margin-bottom: 10px;
+}
+
+.confidence-score {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
 }

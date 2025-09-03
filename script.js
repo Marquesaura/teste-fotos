@@ -7,6 +7,10 @@ class PhotoPlatform {
         this.posts = this.loadPosts();
         this.likedPosts = this.loadLikedPosts();
         
+        // Face Detection
+        this.faceAnalyzer = new FaceAnalyzer();
+        this.faceAnalysis = null;
+        
         this.initializeElements();
         this.bindEvents();
         this.updatePhotoCount();
@@ -14,6 +18,9 @@ class PhotoPlatform {
 
         // Inicializar sincronização em nuvem se habilitada
         this.initializeCloudIfEnabled();
+        
+        // Inicializar Face Detection
+        this.initializeFaceDetection();
     }
 
     initializeElements() {
@@ -41,7 +48,7 @@ class PhotoPlatform {
         this.flipVChk = document.getElementById('flipVChk');
         this.aspectSelect = document.getElementById('aspectSelect');
         this.downloadEditedBtn = document.getElementById('downloadEdited');
-        this.photoCaption = document.getElementById('photoCaption');
+
         this.postPhotoBtn = document.getElementById('postPhoto');
         this.discardPhotoBtn = document.getElementById('discardPhoto');
         this.clearAllBtn = document.getElementById('clearAll');
@@ -56,6 +63,15 @@ class PhotoPlatform {
         this.tabPosts = document.getElementById('tabPosts');
         this.viewCapture = document.getElementById('viewCapture');
         this.viewPosts = document.getElementById('viewPosts');
+        // Face Analysis
+        this.faceAnalysisDiv = document.getElementById('faceAnalysis');
+        this.faceResultsDiv = document.getElementById('faceResults');
+        // Analysis Modal
+        this.faceAnalysisModal = document.getElementById('faceAnalysisModal');
+        this.progressFill = document.getElementById('progressFill');
+        this.analysisStatus = document.getElementById('analysisStatus');
+        this.characteristicsList = document.getElementById('characteristicsList');
+        this.comparisonResults = document.getElementById('comparisonResults');
     }
 
     bindEvents() {
@@ -99,7 +115,7 @@ class PhotoPlatform {
                 document.body.removeChild(link);
             });
         }
-        // Eventos dos filtros/transformações
+        
         const rerender = () => this.renderEditor();
         [this.brightnessRange, this.contrastRange, this.saturateRange, this.blurRange, this.grayscaleChk, this.sepiaChk, this.flipHChk, this.flipVChk, this.aspectSelect]
             .forEach(el => { if (el) el.addEventListener('input', rerender); });
@@ -225,6 +241,8 @@ class PhotoPlatform {
             if (this.previewImage && this.tempPhoto) {
                 this.previewImage.src = this.tempPhoto;
                 this.previewImage.style.display = 'block';
+                // Analisar faces na imagem
+                this.analyzeFacesInImage(this.previewImage);
             }
             return;
         }
@@ -277,12 +295,15 @@ class PhotoPlatform {
             }
             // Esconder fallback após renderizar
             if (this.previewImage) this.previewImage.style.display = 'none';
+            // Analisar faces na imagem renderizada
+            this.analyzeFacesInImage(img);
         };
         img.onerror = () => {
             // Fallback se falhar o load da imagem
             if (this.previewImage) {
                 this.previewImage.src = this.tempPhoto;
                 this.previewImage.style.display = 'block';
+                this.analyzeFacesInImage(this.previewImage);
             }
         };
         img.src = this.tempPhoto;
@@ -454,7 +475,7 @@ class PhotoPlatform {
             // Mostrar preview e armazenar
             this.previewImage.src = photoData;
             this.photoPreview.style.display = 'block';
-            this.photoCaption.value = '';
+
             this.tempPhoto = photoData;
             this.resetEditor();
             this.renderEditor();
@@ -480,7 +501,7 @@ class PhotoPlatform {
             this.tempPhoto = reader.result;
             this.previewImage.src = this.tempPhoto;
             this.photoPreview.style.display = 'block';
-            this.photoCaption.value = '';
+
             this.showNotification('Imagem carregada! Adicione uma legenda e poste.', 'success');
             // limpar o input para permitir re-seleção do mesmo arquivo
             this.fileInput.value = '';
@@ -496,15 +517,19 @@ class PhotoPlatform {
     async postPhoto() {
         if (!this.tempPhoto) return;
 
-        const caption = this.photoCaption.value.trim() || 'Foto sem legenda';
-        
         const finalImage = await this.exportEditedImage();
+        // Usar análise facial como legenda automática
+        const faceAnalysis = this.getFaceAnalysisForPost();
+        const username = this.generateUsername();
+
         const post = {
             id: Date.now(),
             image: finalImage,
-            caption: caption,
+            caption: faceAnalysis,
+            username: username,
             timestamp: new Date().toLocaleString('pt-BR'),
-            likes: 0
+            likes: 0,
+            faceAnalysis: this.faceAnalysis
         };
 
         this.posts.unshift(post); // Adicionar no início
@@ -588,9 +613,9 @@ class PhotoPlatform {
 
     discardPhoto() {
         this.tempPhoto = null;
+        this.faceAnalysis = null; // Limpar análise facial
         this.photoPreview.style.display = 'none';
         this.previewImage.src = '';
-        this.photoCaption.value = '';
     }
 
     renderPosts() {
@@ -611,7 +636,7 @@ class PhotoPlatform {
                 <div class="post-header">
                     <div class="left">
                         <div class="avatar"></div>
-                        <div class="username">usuario</div>
+                        <div class="username">${post.username || 'usuario'}</div>
                     </div>
                     <button class="more">⋯</button>
                 </div>
@@ -815,6 +840,236 @@ class PhotoPlatform {
                 }
             }, 300);
         }, 3000);
+    }
+
+    async initializeFaceDetection() {
+        try {
+            const initialized = await this.faceAnalyzer.initialize();
+            if (initialized) {
+                console.log('Face Detection inicializado com sucesso');
+            } else {
+                console.warn('Face Detection não pôde ser inicializado');
+            }
+        } catch (error) {
+            console.error('Erro ao inicializar Face Detection:', error);
+        }
+    }
+
+    async analyzeFacesInImage(imageElement) {
+        if (!this.faceAnalyzer || !this.faceAnalyzer.isInitialized) {
+            console.log('Face Analyzer não inicializado');
+            return;
+        }
+
+        // Verificar se já temos análise para esta imagem
+        if (this.faceAnalysis && this.faceAnalysis.timestamp) {
+            console.log('Análise já realizada para esta imagem');
+            this.displayFaceAnalysis(this.faceAnalysis);
+            return;
+        }
+
+        // Mostrar modal de análise
+        this.showAnalysisModal();
+        
+        try {
+            // Iniciar análise progressiva
+            const results = await this.performProgressiveAnalysis(imageElement);
+            console.log('Resultados da análise:', results);
+            
+            // Adicionar timestamp para identificar a análise
+            results.timestamp = Date.now();
+            this.faceAnalysis = results;
+            
+            // Mostrar resultado final
+            this.showFinalResult(results);
+            
+        } catch (error) {
+            console.error('Erro na análise facial:', error);
+            this.hideAnalysisModal();
+        }
+    }
+
+    displayFaceAnalysis(results) {
+        if (!this.faceAnalysisDiv || !this.faceResultsDiv) {
+            return;
+        }
+
+        if (!results || !results.characteristics || results.characteristics.length === 0) {
+            this.faceAnalysisDiv.style.display = 'none';
+            return;
+        }
+
+        const tags = this.faceAnalyzer.getCharacteristicsTags(results);
+        const spiderMatch = this.faceAnalyzer.getSpiderMatch(results);
+        
+        if (tags.length === 0 && !spiderMatch) {
+            this.faceAnalysisDiv.style.display = 'none';
+            return;
+        }
+
+        let html = '';
+        
+        // Mostrar características detectadas
+        if (tags.length > 0) {
+            html += tags.map(tag => 
+                `<div class="face-tag">${tag.value}</div>`
+            ).join('');
+        }
+
+        // Mostrar match do Spider-Man
+        if (spiderMatch && spiderMatch.character) {
+            const confidence = Math.round(spiderMatch.score * 100);
+            html += `<div class="face-tag spider-match" style="background: #ff6b6b; color: white; font-weight: bold;">
+                🕷️ ${spiderMatch.character.name} (${confidence}%)
+            </div>`;
+        }
+
+        this.faceResultsDiv.innerHTML = html;
+        this.faceAnalysisDiv.style.display = 'block';
+    }
+
+    getFaceAnalysisForPost() {
+        if (!this.faceAnalysis) {
+            return 'Análise facial concluída! 🕷️';
+        }
+
+        const spiderMatch = this.faceAnalyzer.getSpiderMatch(this.faceAnalysis);
+        if (spiderMatch && spiderMatch.character) {
+            return `Você se parece com ${spiderMatch.character.name}! 🕷️`;
+        }
+
+        return 'Análise facial concluída! 🕷️';
+    }
+
+    generateUsername() {
+        // Gerar nome de usuário único baseado no timestamp
+        const timestamp = Date.now();
+        const userNumber = Math.floor(timestamp / 1000) % 10000; // Últimos 4 dígitos
+        return `user${userNumber}`;
+    }
+
+    showAnalysisModal() {
+        if (this.faceAnalysisModal) {
+            this.faceAnalysisModal.style.display = 'flex';
+            this.resetAnalysisModal();
+        }
+    }
+
+    hideAnalysisModal() {
+        if (this.faceAnalysisModal) {
+            this.faceAnalysisModal.style.display = 'none';
+        }
+    }
+
+    resetAnalysisModal() {
+        if (this.progressFill) this.progressFill.style.width = '0%';
+        if (this.analysisStatus) this.analysisStatus.textContent = 'Iniciando análise...';
+        if (this.characteristicsList) this.characteristicsList.innerHTML = '';
+        if (this.comparisonResults) this.comparisonResults.innerHTML = '';
+    }
+
+    updateProgress(percentage, status) {
+        if (this.progressFill) {
+            this.progressFill.style.width = `${percentage}%`;
+        }
+        if (this.analysisStatus) {
+            this.analysisStatus.textContent = status;
+        }
+    }
+
+    addCharacteristic(type, value, confidence) {
+        if (!this.characteristicsList) return;
+        
+        const item = document.createElement('div');
+        item.className = 'characteristic-item';
+        item.innerHTML = `
+            <strong>${type}:</strong> ${value} 
+            <span style="float: right; opacity: 0.7;">${Math.round(confidence * 100)}%</span>
+        `;
+        
+        this.characteristicsList.appendChild(item);
+        
+        // Animar após um pequeno delay
+        setTimeout(() => {
+            item.classList.add('analyzed');
+        }, 100);
+    }
+
+    async performProgressiveAnalysis(imageElement) {
+        // Simular análise progressiva
+        const steps = [
+            { progress: 10, status: 'Detectando faces...', delay: 800 },
+            { progress: 25, status: 'Analisando idade...', delay: 600 },
+            { progress: 40, status: 'Analisando gênero...', delay: 600 },
+            { progress: 55, status: 'Analisando etnia...', delay: 600 },
+            { progress: 70, status: 'Analisando cabelo...', delay: 600 },
+            { progress: 85, status: 'Analisando barba...', delay: 600 },
+            { progress: 100, status: 'Comparando com personagens Spider-Man...', delay: 1000 }
+        ];
+
+        // Executar análise real
+        const results = await this.faceAnalyzer.detectFaces(imageElement);
+        
+        // Simular progresso
+        for (const step of steps) {
+            this.updateProgress(step.progress, step.status);
+            await this.delay(step.delay);
+        }
+
+        return results;
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    showFinalResult(results) {
+        if (!this.comparisonResults) return;
+
+        // Adicionar características detectadas
+        if (results.characteristics && results.characteristics.length > 0) {
+            const characteristics = results.characteristics[0].characteristics;
+            characteristics.forEach(char => {
+                this.addCharacteristic(
+                    this.getCharacteristicLabel(char.type), 
+                    char.value, 
+                    char.confidence || 0.8
+                );
+            });
+        }
+
+        // Encontrar melhor match
+        const spiderMatch = this.faceAnalyzer.getSpiderMatch(results);
+        
+        // Mostrar resultado final
+        setTimeout(() => {
+            this.comparisonResults.innerHTML = `
+                <div class="final-result">
+                    🕷️ Você se parece com ${spiderMatch.character.name}!
+                </div>
+                <div class="confidence-score">
+                    Confiança: ${Math.round(spiderMatch.score * 100)}%
+                </div>
+            `;
+            
+            // Fechar modal após 3 segundos
+            setTimeout(() => {
+                this.hideAnalysisModal();
+                this.displayFaceAnalysis(results);
+            }, 3000);
+        }, 500);
+    }
+
+    getCharacteristicLabel(type) {
+        const labels = {
+            'age': 'Idade',
+            'gender': 'Gênero',
+            'ethnicity': 'Etnia',
+            'hair': 'Cabelo',
+            'beard': 'Barba',
+            'glasses': 'Óculos'
+        };
+        return labels[type] || type;
     }
 }
 
