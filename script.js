@@ -28,6 +28,18 @@ class PhotoPlatform {
         this.opacityRange = document.getElementById('opacityRange');
         this.opacityValue = document.getElementById('opacityValue');
         this.resetEditBtn = document.getElementById('resetEdit');
+        // Filtros/transformações
+        this.brightnessRange = document.getElementById('brightnessRange');
+        this.contrastRange = document.getElementById('contrastRange');
+        this.saturateRange = document.getElementById('saturateRange');
+        this.blurRange = document.getElementById('blurRange');
+        this.grayscaleChk = document.getElementById('grayscaleChk');
+        this.sepiaChk = document.getElementById('sepiaChk');
+        this.rotateRange = document.getElementById('rotateRange');
+        this.rotateValue = document.getElementById('rotateValue');
+        this.flipHChk = document.getElementById('flipHChk');
+        this.flipVChk = document.getElementById('flipVChk');
+        this.aspectSelect = document.getElementById('aspectSelect');
         this.downloadEditedBtn = document.getElementById('downloadEdited');
         this.photoCaption = document.getElementById('photoCaption');
         this.postPhotoBtn = document.getElementById('postPhoto');
@@ -82,6 +94,16 @@ class PhotoPlatform {
                 document.body.removeChild(link);
             });
         }
+        // Eventos dos filtros/transformações
+        const rerender = () => this.renderEditor();
+        [this.brightnessRange, this.contrastRange, this.saturateRange, this.blurRange, this.grayscaleChk, this.sepiaChk, this.flipHChk, this.flipVChk, this.aspectSelect]
+            .forEach(el => { if (el) el.addEventListener('input', rerender); });
+        if (this.rotateRange) {
+            this.rotateRange.addEventListener('input', () => {
+                if (this.rotateValue) this.rotateValue.textContent = `${this.rotateRange.value}°`;
+                this.renderEditor();
+            });
+        }
         if (this.editorCanvas) {
             this.installCropHandlers();
         }
@@ -121,12 +143,23 @@ class PhotoPlatform {
         const onMove = (e) => {
             if (!this.cropStart) return;
             const p = getPos(e);
-            this.cropRect = {
-                x: Math.min(this.cropStart.x, p.x),
-                y: Math.min(this.cropStart.y, p.y),
-                w: Math.abs(p.x - this.cropStart.x),
-                h: Math.abs(p.y - this.cropStart.y)
-            };
+            let x = Math.min(this.cropStart.x, p.x);
+            let y = Math.min(this.cropStart.y, p.y);
+            let w = Math.abs(p.x - this.cropStart.x);
+            let h = Math.abs(p.y - this.cropStart.y);
+            // Trava de proporção
+            if (this.aspectSelect && this.aspectSelect.value !== 'free') {
+                const [aw, ah] = this.aspectSelect.value.split(':').map(Number);
+                if (aw > 0 && ah > 0) {
+                    const target = aw / ah;
+                    if (w / h > target) {
+                        w = h * target;
+                    } else {
+                        h = w / target;
+                    }
+                }
+            }
+            this.cropRect = { x, y, w, h };
             draw();
         };
         const onUp = () => {
@@ -176,11 +209,32 @@ class PhotoPlatform {
             // Limpar
             this.editorCtx.clearRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
 
-            // Desenhar com opacidade
+            // Montar filtros
+            const brightness = parseFloat(this.brightnessRange ? this.brightnessRange.value : '1') || 1;
+            const contrast = parseFloat(this.contrastRange ? this.contrastRange.value : '1') || 1;
+            const saturate = parseFloat(this.saturateRange ? this.saturateRange.value : '1') || 1;
+            const blur = parseFloat(this.blurRange ? this.blurRange.value : '0') || 0;
+            const grayscale = this.grayscaleChk && this.grayscaleChk.checked ? 1 : 0;
+            const sepia = this.sepiaChk && this.sepiaChk.checked ? 1 : 0;
+            const filterStr = `brightness(${brightness}) contrast(${contrast}) saturate(${saturate}) blur(${blur}px) grayscale(${grayscale}) sepia(${sepia})`;
+
+            // Transformações
+            const rotateDeg = parseFloat(this.rotateRange ? this.rotateRange.value : '0') || 0;
+            const flipH = !!(this.flipHChk && this.flipHChk.checked);
+            const flipV = !!(this.flipVChk && this.flipVChk.checked);
+
+            // Desenhar com opacidade e filtros/transformações
             const alpha = parseFloat(this.opacityRange ? this.opacityRange.value : '1') || 1;
             this.editorCtx.save();
             this.editorCtx.globalAlpha = alpha;
-            this.editorCtx.drawImage(img, 0, 0, this.editorCanvas.width, this.editorCanvas.height);
+            this.editorCtx.filter = filterStr;
+            // aplicar transformações no centro
+            const cx = this.editorCanvas.width / 2;
+            const cy = this.editorCanvas.height / 2;
+            this.editorCtx.translate(cx, cy);
+            if (rotateDeg) this.editorCtx.rotate(rotateDeg * Math.PI / 180);
+            this.editorCtx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+            this.editorCtx.drawImage(img, -cx, -cy, this.editorCanvas.width, this.editorCanvas.height);
             this.editorCtx.restore();
 
             // Escurecer fora da área recortada
@@ -429,38 +483,49 @@ class PhotoPlatform {
     exportEditedImage() {
         // Se não houver editor, retorna a tempPhoto
         if (!this.editorCanvas || !this.tempPhoto) return this.tempPhoto;
-
         const img = new Image();
         const src = this.tempPhoto;
-        const alpha = parseFloat(this.opacityRange ? this.opacityRange.value : '1') || 1;
-        // Usar área de recorte se existir; caso contrário, imagem inteira
-        const produce = () => {
-            const crop = this.cropRect || { x: 0, y: 0, w: this.editorCanvas.width, h: this.editorCanvas.height };
-            const out = document.createElement('canvas');
-            out.width = Math.max(1, Math.round(crop.w));
-            out.height = Math.max(1, Math.round(crop.h));
-            const octx = out.getContext('2d');
-            // Desenhar com opacidade (aplicada no export)
-            octx.save();
-            octx.globalAlpha = alpha;
-            // Mapear recorte do canvas editor para a imagem original (considerando escala usada em renderEditor)
-            // Como usamos scale = min(1, maxW / img.width), a proporção entre editorCanvas e imagem original é img.width/editorCanvas.width
-            const scaleBack = img.width / this.editorCanvas.width;
-            octx.drawImage(
-                img,
-                Math.round(crop.x * scaleBack),
-                Math.round(crop.y * scaleBack),
-                Math.round(crop.w * scaleBack),
-                Math.round(crop.h * scaleBack),
-                0, 0,
-                out.width,
-                out.height
-            );
-            octx.restore();
-            return out.toDataURL('image/png');
-        };
         return new Promise((resolve) => {
-            img.onload = () => resolve(produce());
+            img.onload = () => {
+                // Render offscreen com os mesmos filtros/transformações do preview
+                const off = document.createElement('canvas');
+                off.width = this.editorCanvas.width;
+                off.height = this.editorCanvas.height;
+                const ctx = off.getContext('2d');
+
+                const brightness = parseFloat(this.brightnessRange ? this.brightnessRange.value : '1') || 1;
+                const contrast = parseFloat(this.contrastRange ? this.contrastRange.value : '1') || 1;
+                const saturate = parseFloat(this.saturateRange ? this.saturateRange.value : '1') || 1;
+                const blur = parseFloat(this.blurRange ? this.blurRange.value : '0') || 0;
+                const grayscale = this.grayscaleChk && this.grayscaleChk.checked ? 1 : 0;
+                const sepia = this.sepiaChk && this.sepiaChk.checked ? 1 : 0;
+                const filterStr = `brightness(${brightness}) contrast(${contrast}) saturate(${saturate}) blur(${blur}px) grayscale(${grayscale}) sepia(${sepia})`;
+
+                const alpha = parseFloat(this.opacityRange ? this.opacityRange.value : '1') || 1;
+                const rotateDeg = parseFloat(this.rotateRange ? this.rotateRange.value : '0') || 0;
+                const flipH = !!(this.flipHChk && this.flipHChk.checked);
+                const flipV = !!(this.flipVChk && this.flipVChk.checked);
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.filter = filterStr;
+                const cx = off.width / 2;
+                const cy = off.height / 2;
+                ctx.translate(cx, cy);
+                if (rotateDeg) ctx.rotate(rotateDeg * Math.PI / 180);
+                ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+                ctx.drawImage(img, -cx, -cy, off.width, off.height);
+                ctx.restore();
+
+                // Cortar se houver cropRect
+                const crop = this.cropRect || { x: 0, y: 0, w: off.width, h: off.height };
+                const out = document.createElement('canvas');
+                out.width = Math.max(1, Math.round(crop.w));
+                out.height = Math.max(1, Math.round(crop.h));
+                const octx = out.getContext('2d');
+                octx.drawImage(off, crop.x, crop.y, crop.w, crop.h, 0, 0, out.width, out.height);
+                resolve(out.toDataURL('image/png'));
+            };
             img.src = src;
         });
     }

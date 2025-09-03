@@ -48,6 +48,31 @@
                     <div class="preview-controls">
                         <label class="opacity-row">Opacidade: <input type="range" id="opacityRange" min="0.2" max="1" value="1" step="0.05"> <span id="opacityValue">100%</span></label>
                         <div class="hint">Arraste no canvas para selecionar a área a recortar. Clique fora para limpar.</div>
+                        <div class="filters-grid">
+                            <label>Brilho: <input type="range" id="brightnessRange" min="0.5" max="1.5" value="1" step="0.05"></label>
+                            <label>Contraste: <input type="range" id="contrastRange" min="0.5" max="1.5" value="1" step="0.05"></label>
+                            <label>Saturação: <input type="range" id="saturateRange" min="0" max="2" value="1" step="0.05"></label>
+                            <label>Desfoque: <input type="range" id="blurRange" min="0" max="6" value="0" step="0.5"></label>
+                            <label><input type="checkbox" id="grayscaleChk"> Preto e branco</label>
+                            <label><input type="checkbox" id="sepiaChk"> Sépia</label>
+                        </div>
+                        <div class="transform-row">
+                            <label>Rotação: <input type="range" id="rotateRange" min="-180" max="180" value="0" step="1"> <span id="rotateValue">0°</span></label>
+                            <div class="flip-group">
+                                <label><input type="checkbox" id="flipHChk"> Espelhar H</label>
+                                <label><input type="checkbox" id="flipVChk"> Espelhar V</label>
+                            </div>
+                        </div>
+                        <div class="aspect-row">
+                            <label>Proporção do recorte: 
+                                <select id="aspectSelect">
+                                    <option value="free">Livre</option>
+                                    <option value="1:1">1:1</option>
+                                    <option value="4:3">4:3</option>
+                                    <option value="16:9">16:9</option>
+                                </select>
+                            </label>
+                        </div>
                         <input type="text" id="photoCaption" placeholder="Adicione uma legenda...">
                         <div class="editor-actions">
                             <button id="resetEdit" class="btn btn-secondary">Resetar Edição</button>

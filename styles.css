@@ -202,6 +202,30 @@ main {
     gap: 10px;
 }
 
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+}
+
+.transform-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.flip-group {
+    display: flex;
+    gap: 12px;
+}
+
+.aspect-row {
+    display: flex;
+    gap: 10px;
+}
+
 #photoCaption {
     padding: 12px;
     border: 2px solid #e0e0e0;
