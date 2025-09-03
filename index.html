@@ -17,7 +17,7 @@
             <!-- Seção de Captura -->
             <section class="capture-section">
                 <div class="camera-container">
-                    <video id="video" autoplay muted></video>
+                    <video id="video" autoplay muted playsinline></video>
                     <canvas id="canvas" style="display: none;"></canvas>
                     <div class="camera-overlay">
                         <div class="camera-frame"></div>
@@ -31,9 +31,13 @@
                     <button id="capturePhoto" class="btn btn-success" disabled>
                         📸 Capturar Foto
                     </button>
+                    <button id="uploadPhoto" class="btn btn-primary">
+                        📁 Escolher Foto
+                    </button>
                     <button id="stopCamera" class="btn btn-danger" disabled>
                         ⏹️ Parar Câmera
                     </button>
+                    <input id="fileInput" type="file" accept="image/*" capture="environment" style="display: none;" />
                 </div>
 
                 <!-- Preview da foto capturada -->
