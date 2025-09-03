@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Fotos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📸 Plataforma de Fotos</h1>
+            <p>Capture e compartilhe suas fotos instantaneamente</p>
+        </header>
+
+        <main>
+            <!-- Seção de Captura -->
+            <section class="capture-section">
+                <div class="camera-container">
+                    <video id="video" autoplay muted></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    <div class="camera-overlay">
+                        <div class="camera-frame"></div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="startCamera" class="btn btn-primary">
+                        📷 Iniciar Câmera
+                    </button>
+                    <button id="capturePhoto" class="btn btn-success" disabled>
+                        📸 Capturar Foto
+                    </button>
+                    <button id="stopCamera" class="btn btn-danger" disabled>
+                        ⏹️ Parar Câmera
+                    </button>
+                </div>
+
+                <!-- Preview da foto capturada -->
+                <div id="photoPreview" class="photo-preview" style="display: none;">
+                    <h3>Preview da Foto:</h3>
+                    <img id="previewImage" alt="Preview da foto">
+                    <div class="preview-controls">
+                        <input type="text" id="photoCaption" placeholder="Adicione uma legenda...">
+                        <button id="postPhoto" class="btn btn-primary">📤 Postar Foto</button>
+                        <button id="discardPhoto" class="btn btn-secondary">🗑️ Descartar</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção do Painel -->
+            <section class="panel-section">
+                <h2>📋 Painel de Posts</h2>
+                <div class="panel-controls">
+                    <button id="clearAll" class="btn btn-warning">🗑️ Limpar Todas as Fotos</button>
+                    <span id="photoCount" class="photo-count">0 fotos</span>
+                </div>
+                <div id="postsContainer" class="posts-container">
+                    <div class="empty-state">
+                        <p>📷 Nenhuma foto postada ainda</p>
+                        <p>Use a câmera acima para capturar sua primeira foto!</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

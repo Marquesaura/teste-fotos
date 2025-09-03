@@ -1,0 +1,19 @@
+{
+  "name": "plataforma-fotos",
+  "version": "1.0.0",
+  "description": "Plataforma para capturar fotos e postar em painel sem login",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 3000 -o",
+    "dev": "npx live-server --port=3000 --open=/index.html",
+    "build": "echo 'Build completed - static files ready'",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": ["fotos", "camera", "web", "javascript", "html5"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "live-server": "^1.2.2"
+  }
+}
