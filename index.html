@@ -14,8 +14,12 @@
         </header>
 
         <main>
+            <nav class="tabs">
+                <button id="tabCapture" class="tab-btn active">Capturar</button>
+                <button id="tabPosts" class="tab-btn">Posts</button>
+            </nav>
             <!-- Seção de Captura -->
-            <section class="capture-section">
+            <section class="capture-section" id="viewCapture">
                 <div class="camera-container">
                     <video id="video" autoplay muted playsinline></video>
                     <canvas id="canvas" style="display: none;"></canvas>
@@ -85,7 +89,7 @@
             </section>
 
             <!-- Seção do Painel -->
-            <section class="panel-section">
+            <section class="panel-section" id="viewPosts" style="display: none;">
                 <h2> Painel de Posts</h2>
                 <div class="panel-controls">
                     <button id="clearAll" class="btn btn-warning">Limpar Todas as Fotos</button>

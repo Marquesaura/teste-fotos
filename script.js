@@ -51,6 +51,11 @@ class PhotoPlatform {
         this.cameraPrompt = document.getElementById('cameraPrompt');
         this.allowCameraBtn = document.getElementById('allowCamera');
         this.denyCameraBtn = document.getElementById('denyCamera');
+        // Tabs/views
+        this.tabCapture = document.getElementById('tabCapture');
+        this.tabPosts = document.getElementById('tabPosts');
+        this.viewCapture = document.getElementById('viewCapture');
+        this.viewPosts = document.getElementById('viewPosts');
     }
 
     bindEvents() {
@@ -106,6 +111,24 @@ class PhotoPlatform {
         }
         if (this.editorCanvas) {
             this.installCropHandlers();
+        }
+        // Tabs
+        if (this.tabCapture && this.tabPosts) {
+            this.tabCapture.addEventListener('click', () => this.switchView('capture'));
+            this.tabPosts.addEventListener('click', () => this.switchView('posts'));
+        }
+    }
+
+    switchView(target) {
+        const toCapture = target === 'capture';
+        if (this.viewCapture) this.viewCapture.style.display = toCapture ? '' : 'none';
+        if (this.viewPosts) this.viewPosts.style.display = toCapture ? 'none' : '';
+        if (this.tabCapture && this.tabPosts) {
+            this.tabCapture.classList.toggle('active', toCapture);
+            this.tabPosts.classList.toggle('active', !toCapture);
+        }
+        if (!toCapture && this.postsContainer) {
+            this.postsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 
@@ -491,6 +514,7 @@ class PhotoPlatform {
         this.discardPhoto();
         
         this.showNotification('Foto postada com sucesso! 📤', 'success');
+        this.switchView('posts');
 
         // Enviar para nuvem, se habilitado
         this.pushPostToCloud(post).catch(() => {});
@@ -584,22 +608,22 @@ class PhotoPlatform {
             const isLiked = !!this.likedPosts[post.id];
             return `
             <div class="post-item" data-id="${post.id}">
-                <img src="${post.image}" alt="Foto postada" class="post-image">
-                <div class="post-caption">"${post.caption}"</div>
-                <div class="post-meta">
-                    <span>📅 ${post.timestamp}</span>
-                    <div class="post-actions">
-                        <button class="action-btn${isLiked ? ' liked' : ''}" ${isLiked ? 'disabled' : ''} onclick="photoPlatform.likePost(${post.id})" title="Curtir">
-                            ❤️ ${post.likes}
-                        </button>
-                        <button class="action-btn" onclick="photoPlatform.downloadPost(${post.id})" title="Baixar">
-                            ⬇️
-                        </button>
-                        <button class="action-btn" onclick="photoPlatform.deletePost(${post.id})" title="Excluir">
-                            🗑️
-                        </button>
+                <div class="post-header">
+                    <div class="left">
+                        <div class="avatar"></div>
+                        <div class="username">usuario</div>
                     </div>
+                    <button class="more">⋯</button>
                 </div>
+                <img src="${post.image}" alt="Foto postada" class="post-image">
+                <div class="post-actions">
+                    <button class="action-btn${isLiked ? ' liked' : ''}" ${isLiked ? 'disabled' : ''} onclick="photoPlatform.likePost(${post.id})" title="Curtir">❤️</button>
+                    <button class="action-btn" onclick="photoPlatform.downloadPost(${post.id})" title="Baixar">⬇️</button>
+                    <button class="action-btn" onclick="photoPlatform.deletePost(${post.id})" title="Excluir">🗑️</button>
+                </div>
+                <div class="likes-row">${post.likes} curtida${post.likes !== 1 ? 's' : ''}</div>
+                <div class="post-caption">${post.caption ? post.caption : ''}</div>
+                <div class="timestamp">${post.timestamp}</div>
             </div>
         `;
         }).join('');

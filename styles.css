@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #c381cd 0%, #85088c 100%);
+    background: #fafafa;
     min-height: 100vh;
     color: #333;
 }
@@ -20,7 +20,7 @@ body {
 header {
     text-align: center;
     margin-bottom: 40px;
-    color: white;
+    color: #111;
 }
 
 header h1 {
@@ -39,6 +39,24 @@ main {
     grid-template-columns: 1fr 1fr;
     gap: 30px;
     align-items: start;
+}
+
+.tabs {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.tab-btn {
+    background: #fff;
+    border: 1px solid #dbdbdb;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.tab-btn.active {
+    background: #efefef;
 }
 
 @media (max-width: 768px) {
@@ -241,10 +259,10 @@ main {
 
 /* Seção do Painel */
 .panel-section {
-    background: white;
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    background: transparent;
+    border-radius: 0;
+    padding: 0 0 25px 0;
+    box-shadow: none;
 }
 
 .panel-section h2 {
@@ -272,9 +290,11 @@ main {
 
 /* Container de Posts */
 .posts-container {
-    max-height: 600px;
-    overflow-y: auto;
-    padding-right: 10px;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .posts-container::-webkit-scrollbar {
@@ -292,59 +312,77 @@ main {
 }
 
 .post-item {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-left: 4px solid #85088c;
-    transition: transform 0.2s ease;
+    background: #fff;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #dbdbdb;
+    overflow: hidden;
 }
 
-.post-item:hover {
-    transform: translateX(5px);
-}
+.post-item:hover { }
 
 .post-image {
+    display: block;
     width: 100%;
-    max-width: 200px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    background: #000;
 }
 
 .post-caption {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 8px;
-    font-style: italic;
+    font-size: 14px;
+    color: #222;
+    padding: 0 16px 8px 16px;
 }
 
 .post-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8rem;
-    color: #999;
+    display: none;
 }
 
 .post-actions {
     display: flex;
-    gap: 5px;
+    gap: 10px;
+    padding: 8px 10px 6px 10px;
 }
 
 .action-btn {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.2rem;
-    padding: 5px;
+    font-size: 22px;
+    padding: 4px;
     border-radius: 4px;
     transition: background-color 0.2s ease;
 }
 
-.action-btn:hover {
-    background-color: rgba(0,0,0,0.1);
+.action-btn:hover { background-color: rgba(0,0,0,0.06); }
+.action-btn.liked { color: #ed4956; }
+
+.likes-row {
+    font-weight: 600;
+    padding: 0 16px;
+    margin-bottom: 6px;
+    font-size: 14px;
 }
+
+.timestamp {
+    color: #8e8e8e;
+    font-size: 12px;
+    padding: 0 16px 12px 16px;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+}
+.post-header .left { display: flex; align-items: center; gap: 10px; }
+.avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: #ddd; border: 1px solid #ccc;
+}
+.username { font-weight: 600; font-size: 14px; }
+.more { background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
 
 .empty-state {
     text-align: center;
