@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>📸 Plataforma de Fotos</h1>
+            <h1> Plataforma de Fotos</h1>
             <p>Capture e compartilhe suas fotos instantaneamente</p>
         </header>
 
@@ -26,16 +26,16 @@
                 
                 <div class="controls">
                     <button id="startCamera" class="btn btn-primary">
-                        📷 Iniciar Câmera
+                         Iniciar Câmera
                     </button>
                     <button id="capturePhoto" class="btn btn-success" disabled>
-                        📸 Capturar Foto
+                         Capturar Foto
                     </button>
                     <button id="uploadPhoto" class="btn btn-primary">
-                        📁 Escolher Foto
+                         Escolher Foto
                     </button>
                     <button id="stopCamera" class="btn btn-danger" disabled>
-                        ⏹️ Parar Câmera
+                        Parar Câmera
                     </button>
                     <input id="fileInput" type="file" accept="image/*" capture="environment" style="display: none;" />
                 </div>
@@ -43,25 +43,32 @@
                 <!-- Preview da foto capturada -->
                 <div id="photoPreview" class="photo-preview" style="display: none;">
                     <h3>Preview da Foto:</h3>
-                    <img id="previewImage" alt="Preview da foto">
+                    <canvas id="editorCanvas"></canvas>
+                    <img id="previewImage" alt="Preview da foto" style="display:none;">
                     <div class="preview-controls">
+                        <label class="opacity-row">Opacidade: <input type="range" id="opacityRange" min="0.2" max="1" value="1" step="0.05"> <span id="opacityValue">100%</span></label>
+                        <div class="hint">Arraste no canvas para selecionar a área a recortar. Clique fora para limpar.</div>
                         <input type="text" id="photoCaption" placeholder="Adicione uma legenda...">
-                        <button id="postPhoto" class="btn btn-primary">📤 Postar Foto</button>
-                        <button id="discardPhoto" class="btn btn-secondary">🗑️ Descartar</button>
+                        <div class="editor-actions">
+                            <button id="resetEdit" class="btn btn-secondary">Resetar Edição</button>
+                            <button id="downloadEdited" class="btn btn-primary">Baixar Editada</button>
+                        </div>
+                        <button id="postPhoto" class="btn btn-primary">Postar Foto</button>
+                        <button id="discardPhoto" class="btn btn-secondary"> Descartar</button>
                     </div>
                 </div>
             </section>
 
             <!-- Seção do Painel -->
             <section class="panel-section">
-                <h2>📋 Painel de Posts</h2>
+                <h2> Painel de Posts</h2>
                 <div class="panel-controls">
                     <button id="clearAll" class="btn btn-warning">🗑️ Limpar Todas as Fotos</button>
                     <span id="photoCount" class="photo-count">0 fotos</span>
                 </div>
                 <div id="postsContainer" class="posts-container">
                     <div class="empty-state">
-                        <p>📷 Nenhuma foto postada ainda</p>
+                        <p> Nenhuma foto postada ainda</p>
                         <p>Use a câmera acima para capturar sua primeira foto!</p>
                     </div>
                 </div>

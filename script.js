@@ -23,6 +23,12 @@ class PhotoPlatform {
         this.stopCameraBtn = document.getElementById('stopCamera');
         this.photoPreview = document.getElementById('photoPreview');
         this.previewImage = document.getElementById('previewImage');
+        this.editorCanvas = document.getElementById('editorCanvas');
+        this.editorCtx = this.editorCanvas ? this.editorCanvas.getContext('2d') : null;
+        this.opacityRange = document.getElementById('opacityRange');
+        this.opacityValue = document.getElementById('opacityValue');
+        this.resetEditBtn = document.getElementById('resetEdit');
+        this.downloadEditedBtn = document.getElementById('downloadEdited');
         this.photoCaption = document.getElementById('photoCaption');
         this.postPhotoBtn = document.getElementById('postPhoto');
         this.discardPhotoBtn = document.getElementById('discardPhoto');
@@ -59,6 +65,134 @@ class PhotoPlatform {
         }
 
         this.initializePermissionPrompt();
+        if (this.opacityRange) {
+            this.opacityRange.addEventListener('input', () => this.updateOpacity());
+        }
+        if (this.resetEditBtn) {
+            this.resetEditBtn.addEventListener('click', () => this.resetEditor());
+        }
+        if (this.downloadEditedBtn) {
+            this.downloadEditedBtn.addEventListener('click', async () => {
+                const out = await this.exportEditedImage();
+                const link = document.createElement('a');
+                link.href = out;
+                link.download = `foto_editada_${Date.now()}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+        if (this.editorCanvas) {
+            this.installCropHandlers();
+        }
+    }
+
+    installCropHandlers() {
+        this.cropStart = null; // {x,y}
+        this.cropRect = null;  // {x,y,w,h}
+        const getPos = (e) => {
+            const rect = this.editorCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: Math.max(0, Math.min(this.editorCanvas.width, (clientX - rect.left) * (this.editorCanvas.width / rect.width))),
+                y: Math.max(0, Math.min(this.editorCanvas.height, (clientY - rect.top) * (this.editorCanvas.height / rect.height)))
+            };
+        };
+
+        const draw = () => {
+            this.renderEditor();
+            if (this.cropRect) {
+                this.editorCtx.save();
+                this.editorCtx.strokeStyle = '#9d1ea4';
+                this.editorCtx.lineWidth = 3;
+                this.editorCtx.setLineDash([8, 6]);
+                this.editorCtx.strokeRect(this.cropRect.x, this.cropRect.y, this.cropRect.w, this.cropRect.h);
+                this.editorCtx.restore();
+            }
+        };
+
+        const onDown = (e) => {
+            e.preventDefault();
+            this.cropStart = getPos(e);
+            this.cropRect = { x: this.cropStart.x, y: this.cropStart.y, w: 0, h: 0 };
+            draw();
+        };
+        const onMove = (e) => {
+            if (!this.cropStart) return;
+            const p = getPos(e);
+            this.cropRect = {
+                x: Math.min(this.cropStart.x, p.x),
+                y: Math.min(this.cropStart.y, p.y),
+                w: Math.abs(p.x - this.cropStart.x),
+                h: Math.abs(p.y - this.cropStart.y)
+            };
+            draw();
+        };
+        const onUp = () => {
+            this.cropStart = null;
+            draw();
+        };
+
+        this.editorCanvas.addEventListener('mousedown', onDown);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        this.editorCanvas.addEventListener('touchstart', onDown, { passive: false });
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onUp);
+        this.editorCleanup = () => {
+            this.editorCanvas.removeEventListener('mousedown', onDown);
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            this.editorCanvas.removeEventListener('touchstart', onDown);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onUp);
+        };
+    }
+
+    updateOpacity() {
+        const v = parseFloat(this.opacityRange.value || '1');
+        if (this.opacityValue) this.opacityValue.textContent = `${Math.round(v * 100)}%`;
+        this.renderEditor();
+    }
+
+    resetEditor() {
+        this.cropRect = null;
+        if (this.opacityRange) this.opacityRange.value = '1';
+        if (this.opacityValue) this.opacityValue.textContent = '100%';
+        this.renderEditor();
+    }
+
+    renderEditor() {
+        if (!this.editorCanvas || !this.editorCtx || !this.tempPhoto) return;
+        const img = new Image();
+        img.onload = () => {
+            // Ajustar canvas para caber a imagem mantendo proporção até um limite
+            const maxW = 900;
+            const scale = Math.min(1, maxW / img.width);
+            this.editorCanvas.width = Math.round(img.width * scale);
+            this.editorCanvas.height = Math.round(img.height * scale);
+
+            // Limpar
+            this.editorCtx.clearRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
+
+            // Desenhar com opacidade
+            const alpha = parseFloat(this.opacityRange ? this.opacityRange.value : '1') || 1;
+            this.editorCtx.save();
+            this.editorCtx.globalAlpha = alpha;
+            this.editorCtx.drawImage(img, 0, 0, this.editorCanvas.width, this.editorCanvas.height);
+            this.editorCtx.restore();
+
+            // Escurecer fora da área recortada
+            if (this.cropRect) {
+                this.editorCtx.save();
+                this.editorCtx.fillStyle = 'rgba(0,0,0,0.25)';
+                this.editorCtx.fillRect(0, 0, this.editorCanvas.width, this.editorCanvas.height);
+                this.editorCtx.clearRect(this.cropRect.x, this.cropRect.y, this.cropRect.w, this.cropRect.h);
+                this.editorCtx.restore();
+            }
+        };
+        img.src = this.tempPhoto;
     }
 
     async initializePermissionPrompt() {
@@ -229,6 +363,8 @@ class PhotoPlatform {
             this.photoPreview.style.display = 'block';
             this.photoCaption.value = '';
             this.tempPhoto = photoData;
+            this.resetEditor();
+            this.renderEditor();
 
             this.showNotification('Foto capturada! Adicione uma legenda e poste.', 'success');
         } catch (err) {
@@ -255,6 +391,8 @@ class PhotoPlatform {
             this.showNotification('Imagem carregada! Adicione uma legenda e poste.', 'success');
             // limpar o input para permitir re-seleção do mesmo arquivo
             this.fileInput.value = '';
+            this.resetEditor();
+            this.renderEditor();
         };
         reader.onerror = () => {
             this.showNotification('Falha ao ler a imagem.', 'error');
@@ -262,14 +400,15 @@ class PhotoPlatform {
         reader.readAsDataURL(file);
     }
 
-    postPhoto() {
+    async postPhoto() {
         if (!this.tempPhoto) return;
 
         const caption = this.photoCaption.value.trim() || 'Foto sem legenda';
         
+        const finalImage = await this.exportEditedImage();
         const post = {
             id: Date.now(),
-            image: this.tempPhoto,
+            image: finalImage,
             caption: caption,
             timestamp: new Date().toLocaleString('pt-BR'),
             likes: 0
@@ -285,6 +424,45 @@ class PhotoPlatform {
 
         // Enviar para nuvem, se habilitado
         this.pushPostToCloud(post).catch(() => {});
+    }
+
+    exportEditedImage() {
+        // Se não houver editor, retorna a tempPhoto
+        if (!this.editorCanvas || !this.tempPhoto) return this.tempPhoto;
+
+        const img = new Image();
+        const src = this.tempPhoto;
+        const alpha = parseFloat(this.opacityRange ? this.opacityRange.value : '1') || 1;
+        // Usar área de recorte se existir; caso contrário, imagem inteira
+        const produce = () => {
+            const crop = this.cropRect || { x: 0, y: 0, w: this.editorCanvas.width, h: this.editorCanvas.height };
+            const out = document.createElement('canvas');
+            out.width = Math.max(1, Math.round(crop.w));
+            out.height = Math.max(1, Math.round(crop.h));
+            const octx = out.getContext('2d');
+            // Desenhar com opacidade (aplicada no export)
+            octx.save();
+            octx.globalAlpha = alpha;
+            // Mapear recorte do canvas editor para a imagem original (considerando escala usada em renderEditor)
+            // Como usamos scale = min(1, maxW / img.width), a proporção entre editorCanvas e imagem original é img.width/editorCanvas.width
+            const scaleBack = img.width / this.editorCanvas.width;
+            octx.drawImage(
+                img,
+                Math.round(crop.x * scaleBack),
+                Math.round(crop.y * scaleBack),
+                Math.round(crop.w * scaleBack),
+                Math.round(crop.h * scaleBack),
+                0, 0,
+                out.width,
+                out.height
+            );
+            octx.restore();
+            return out.toDataURL('image/png');
+        };
+        return new Promise((resolve) => {
+            img.onload = () => resolve(produce());
+            img.src = src;
+        });
     }
 
     async pushPostToCloud(post) {
