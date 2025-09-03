@@ -27,6 +27,9 @@ class PhotoPlatform {
         this.photoCount = document.getElementById('photoCount');
         this.postsContainer = document.getElementById('postsContainer');
         this.fileInput = document.getElementById('fileInput');
+        this.cameraPrompt = document.getElementById('cameraPrompt');
+        this.allowCameraBtn = document.getElementById('allowCamera');
+        this.denyCameraBtn = document.getElementById('denyCamera');
     }
 
     bindEvents() {
@@ -38,6 +41,58 @@ class PhotoPlatform {
         this.discardPhotoBtn.addEventListener('click', () => this.discardPhoto());
         this.clearAllBtn.addEventListener('click', () => this.clearAllPosts());
         this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+
+        if (this.allowCameraBtn) {
+            this.allowCameraBtn.addEventListener('click', async () => {
+                this.hideCameraPrompt();
+                await this.startCamera();
+            });
+        }
+        if (this.denyCameraBtn) {
+            this.denyCameraBtn.addEventListener('click', () => {
+                this.hideCameraPrompt();
+                this.showNotification('Você pode iniciar a câmera a qualquer momento.', 'info');
+            });
+        }
+
+        this.initializePermissionPrompt();
+    }
+
+    async initializePermissionPrompt() {
+        try {
+            // Alguns navegadores suportam Permissions API
+            if (navigator.permissions && navigator.permissions.query) {
+                const status = await navigator.permissions.query({ name: 'camera' });
+                if (status.state === 'granted') {
+                    // Já concedido: inicia direto
+                    await this.startCamera();
+                } else if (status.state === 'prompt') {
+                    // Mostra o modal para o usuário iniciar o fluxo
+                    this.showCameraPrompt();
+                } else {
+                    // denied
+                    this.showCameraPrompt();
+                }
+                // Atualiza UI se o estado mudar enquanto a página está aberta
+                status.onchange = () => {
+                    if (status.state === 'granted') {
+                        this.hideCameraPrompt();
+                        this.startCamera();
+                    }
+                };
+                return;
+            }
+        } catch (_) {}
+        // Fallback: se não houver Permissions API, apenas mostra o prompt inicial
+        this.showCameraPrompt();
+    }
+
+    showCameraPrompt() {
+        if (this.cameraPrompt) this.cameraPrompt.style.display = 'flex';
+    }
+
+    hideCameraPrompt() {
+        if (this.cameraPrompt) this.cameraPrompt.style.display = 'none';
     }
 
     async startCamera() {

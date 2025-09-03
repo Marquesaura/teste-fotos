@@ -69,6 +69,19 @@
         </main>
     </div>
 
+    <!-- Modal de permissão da câmera -->
+    <div id="cameraPrompt" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Permitir uso da câmera?</h3>
+            <p>Precisamos de acesso à sua câmera para tirar fotos. Nenhuma imagem é enviada para servidores.</p>
+            <div class="modal-actions">
+                <button id="allowCamera" class="btn btn-primary">Permitir câmera</button>
+                <button id="denyCamera" class="btn btn-secondary">Agora não</button>
+            </div>
+            <small class="modal-note">Dica: use em HTTPS ou localhost para melhor compatibilidade.</small>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
